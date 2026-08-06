@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  NURSE
+  HR
+}
+
+enum NurseStatus {
+  ACTIVE
+  ON_LEAVE
+}
+
+enum ShiftType {
+  MORNING
+  EVENING
+  NIGHT
+}
+
+enum LeaveType {
+  ANNUAL
+  PERSONAL
+  SICK
+  EMERGENCY
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id           String      @id @default(uuid())
+  name         String
+  email        String      @unique
+  passwordHash String
+  role         Role
+  avatar       String?
+  phone        String?
+  ward         String? // nurses only
+  department   String? // HR only
+  status       NurseStatus @default(ACTIVE) // nurses only
+  createdAt    DateTime    @default(now())
+
+  shifts        Shift[]
+  leaveRequests LeaveRequest[]
+  availability  Availability?
+}
+
+model Shift {
+  id        String    @id @default(uuid())
+  nurseId   String
+  nurse     User      @relation(fields: [nurseId], references: [id], onDelete: Cascade)
+  date      DateTime  @db.Date
+  type      ShiftType
+  ward      String
+  startTime String
+  endTime   String
+  createdAt DateTime  @default(now())
+
+  @@index([nurseId, date])
+  @@index([date])
+}
+
+model LeaveRequest {
+  id        String      @id @default(uuid())
+  nurseId   String
+  nurse     User        @relation(fields: [nurseId], references: [id], onDelete: Cascade)
+  type      LeaveType
+  startDate DateTime    @db.Date
+  endDate   DateTime    @db.Date
+  reason    String?
+  status    LeaveStatus @default(PENDING)
+  createdAt DateTime    @default(now())
+
+  @@index([nurseId])
+  @@index([status])
+}
+
+model Availability {
+  id        String   @id @default(uuid())
+  nurseId   String   @unique
+  nurse     User     @relation(fields: [nurseId], references: [id], onDelete: Cascade)
+  data      Json
+  updatedAt DateTime @updatedAt
+}

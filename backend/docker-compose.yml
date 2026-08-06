@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: careshift-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: careshift
+      POSTGRES_PASSWORD: careshift
+      POSTGRES_DB: careshift
+    ports:
+      - "5432:5432"
+    volumes:
+      - careshift_pgdata:/var/lib/postgresql/data
+
+volumes:
+  careshift_pgdata:
