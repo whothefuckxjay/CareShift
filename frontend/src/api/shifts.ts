@@ -1,5 +1,5 @@
 import { api } from "./client";
-import { ApiShift, DayCoverage, ShiftType } from "./types";
+import { ApiShift, DayCoverage, GenerateScheduleResult, ShiftType } from "./types";
 
 export async function getMyShifts() {
   const res = await api.get<{ shifts: ApiShift[] }>("/shifts/me");
@@ -37,4 +37,9 @@ export async function createShift(input: {
 
 export async function deleteShift(id: string) {
   await api.delete(`/shifts/${id}`);
+}
+
+export async function generateSchedule() {
+  const res = await api.post<GenerateScheduleResult>("/shifts/generate");
+  return res.data;
 }

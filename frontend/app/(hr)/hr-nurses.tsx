@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { View, Text, ScrollView, Pressable, TextInput, StyleSheet, RefreshControl } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Search, ChevronRight, UserPlus } from "lucide-react-native";
 import { useAppTheme } from "@/theme/ThemeContext";
@@ -25,6 +25,12 @@ export default function HRNursesTab() {
   const { state, refresh } = useApi<ApiUser[]>(
     () => nursesApi.listNurses({ search: query, ward }),
     [query, ward]
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh])
   );
 
   return (

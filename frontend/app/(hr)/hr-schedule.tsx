@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import { View, Text, ScrollView, Pressable, StyleSheet, RefreshControl } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Bell, Sparkles } from "lucide-react-native";
 import { useAppTheme } from "@/theme/ThemeContext";
@@ -17,9 +17,27 @@ const SHIFT_ROWS: { key: keyof DayCoverage; label: string; time: string }[] = [
   { key: "night", label: "Night Shift", time: "11:00 PM – 7:00 AM" },
 ];
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
 function coverageColor(filled: number, required: number, colors: any) {
   const pct = required > 0 ? filled / required : 0;
   return pct >= 1 ? colors.success : pct >= 0.85 ? colors.warning : colors.danger;
+}
+
+// Mirrors the backend's startOfWeek() in shifts.routes.ts so "This Week" /
+// "Next Week" here line up exactly with what Generate Schedule targets.
+function mondayOfWeek(offsetWeeks: number) {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() - date.getDay() + 1 + offsetWeeks * 7);
+  return date;
+}
+
+function formatRange(monday: Date) {
+  const sunday = new Date(monday);
+  sunday.setDate(sunday.getDate() + 6);
+  const fmt = (d: Date) => `${MONTHS[d.getMonth()]} ${d.getDate()}`;
+  return `${fmt(monday)} – ${fmt(sunday)}`;
 }
 
 export default function HRScheduleTab() {
@@ -27,8 +45,13 @@ export default function HRScheduleTab() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { contentMaxWidth } = useResponsive();
+  const { week } = useLocalSearchParams<{ week?: string }>();
+  const [weekOffset, setWeekOffset] = useState(week === "next" ? 1 : 0);
 
-  const { state, refresh } = useApi<DayCoverage[]>(() => shiftsApi.getWeekCoverage());
+  const weekStartDate = useMemo(() => mondayOfWeek(weekOffset), [weekOffset]);
+  const weekStartStr = weekStartDate.toISOString().split("T")[0];
+
+  const { state, refresh } = useApi<DayCoverage[]>(() => shiftsApi.getWeekCoverage(weekStartStr), [weekStartStr]);
 
   if (state.status === "loading") {
     return (
@@ -62,6 +85,25 @@ export default function HRScheduleTab() {
         refreshControl={<RefreshControl refreshing={false} onRefresh={refresh} tintColor={colors.primary} />}
       >
         <View style={[styles.page, { maxWidth: contentMaxWidth, alignSelf: "center", width: "100%" }]}>
+          <View style={styles.weekSwitchRow}>
+            {[{ label: "This Week", offset: 0 }, { label: "Next Week", offset: 1 }].map((opt) => {
+              const active = weekOffset === opt.offset;
+              return (
+                <Pressable
+                  key={opt.label}
+                  onPress={() => setWeekOffset(opt.offset)}
+                  style={[
+                    styles.weekSwitchChip,
+                    { backgroundColor: active ? colors.primary : colors.surfaceAlt, borderColor: active ? colors.primary : colors.border },
+                  ]}
+                >
+                  <Text style={{ color: active ? "#fff" : colors.textSecondary, fontSize: 12, fontWeight: "700" }}>{opt.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <Text style={[styles.weekRange, { color: colors.textMuted }]}>{formatRange(weekStartDate)}</Text>
+
           <View style={styles.legendRow}>
             {[{ color: colors.success, label: "Fully Covered" }, { color: colors.warning, label: "Partial" }, { color: colors.danger, label: "Understaffed" }].map((l) => (
               <View key={l.label} style={styles.legendItem}>
@@ -111,6 +153,9 @@ const styles = StyleSheet.create({
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingBottom: 14, borderBottomWidth: StyleSheet.hairlineWidth },
   headerTitle: { fontSize: 20, fontWeight: "800" },
   page: { paddingHorizontal: 16, paddingTop: 14 },
+  weekSwitchRow: { flexDirection: "row", gap: 8, marginBottom: 8 },
+  weekSwitchChip: { flex: 1, alignItems: "center", paddingVertical: 9, borderRadius: 20, borderWidth: 1 },
+  weekRange: { fontSize: 12, textAlign: "center", marginBottom: 16 },
   legendRow: { flexDirection: "row", gap: 14, marginBottom: 16 },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
   legendDot: { width: 8, height: 8, borderRadius: 4 },

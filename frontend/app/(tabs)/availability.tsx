@@ -68,7 +68,15 @@ export default function AvailabilityTab() {
     );
   }
 
-  const data = localData!;
+  const data = localData ?? {
+  Mon: { morning: false, evening: false, night: false },
+  Tue: { morning: false, evening: false, night: false },
+  Wed: { morning: false, evening: false, night: false },
+  Thu: { morning: false, evening: false, night: false },
+  Fri: { morning: false, evening: false, night: false },
+  Sat: { morning: false, evening: false, night: false },
+  Sun: { morning: false, evening: false, night: false },
+};
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>

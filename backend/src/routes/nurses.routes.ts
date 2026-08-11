@@ -87,6 +87,24 @@ router.post("/", requireRole("HR"), async (req, res) => {
   res.status(201).json({ nurse: toPublicUser(nurse) });
 });
 
+// DELETE /api/nurses/:id   (HR only) — remove a nurse and everything tied to them.
+// Deletes related records sequentially (not in a transaction) in a fixed order —
+// shifts, leave requests, availability, messages — before the user row itself,
+// so no delete ever runs against a row still referenced by a foreign key.
+router.delete("/:id", requireRole("HR"), async (req, res) => {
+  const { id } = req.params;
+  const nurse = await prisma.user.findUnique({ where: { id } });
+  if (!nurse || nurse.role !== "NURSE") return res.status(404).json({ error: "Nurse not found." });
+
+  await prisma.shift.deleteMany({ where: { nurseId: id } });
+  await prisma.leaveRequest.deleteMany({ where: { nurseId: id } });
+  await prisma.availability.deleteMany({ where: { nurseId: id } });
+  await prisma.message.deleteMany({ where: { OR: [{ senderId: id }, { recipientId: id }] } });
+  await prisma.user.delete({ where: { id } });
+
+  res.json({ ok: true });
+});
+
 const updateNurseSchema = z.object({
   status: z.enum(["ACTIVE", "ON_LEAVE"]).optional(),
   ward: z.string().optional(),

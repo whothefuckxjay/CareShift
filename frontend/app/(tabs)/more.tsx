@@ -10,9 +10,11 @@ import {
   Settings,
   LogOut,
   ChevronRight,
+  MessageCircle,
 } from "lucide-react-native";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
+import { useMessages } from "@/context/MessagesContext";
 import { useResponsive } from "@/hooks/useResponsive";
 import Card from "@/components/Card";
 import Avatar from "@/components/Avatar";
@@ -22,11 +24,13 @@ export default function MoreTab() {
   const { colors } = useAppTheme();
   const router = useRouter();
   const { user, signOut } = useAuth();
+  const { unreadCount } = useMessages();
   const insets = useSafeAreaInsets();
   const { contentMaxWidth } = useResponsive();
 
   const items = [
     { icon: User, label: "Profile", sub: "View and edit your details", onPress: () => router.push("/profile") },
+    { icon: MessageCircle, label: "Messages", sub: "Chat with HR", badge: unreadCount, onPress: () => router.push("/messages") },
     { icon: Bell, label: "Notifications", sub: "Alerts and updates", onPress: () => router.push("/notifications") },
     { icon: BarChart3, label: "My Analytics", sub: "Hours worked & shift trends", onPress: () => router.push("/analytics") },
     { icon: Settings, label: "Settings", sub: "Appearance & preferences", onPress: () => router.push("/settings") },
@@ -89,6 +93,11 @@ export default function MoreTab() {
                   <Text style={[styles.menuLabel, { color: colors.text }]}>{item.label}</Text>
                   <Text style={[styles.menuSub, { color: colors.textMuted }]}>{item.sub}</Text>
                 </View>
+                {item.badge ? (
+                  <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+                    <Text style={styles.badgeText}>{item.badge}</Text>
+                  </View>
+                ) : null}
                 <ChevronRight size={18} color={colors.textMuted} />
               </Pressable>
             ))}
@@ -117,6 +126,8 @@ const styles = StyleSheet.create({
   menuIcon: { width: 38, height: 38, borderRadius: 11, alignItems: "center", justifyContent: "center" },
   menuLabel: { fontSize: 14, fontWeight: "600" },
   menuSub: { fontSize: 11, marginTop: 2 },
+  badge: { minWidth: 20, height: 20, borderRadius: 10, alignItems: "center", justifyContent: "center", paddingHorizontal: 5, marginRight: 6 },
+  badgeText: { color: "#fff", fontSize: 11, fontWeight: "700" },
   logoutBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 20, paddingVertical: 14, borderRadius: 14 },
   logoutText: { fontWeight: "700", fontSize: 14 },
   version: { textAlign: "center", fontSize: 11, marginTop: 20 },

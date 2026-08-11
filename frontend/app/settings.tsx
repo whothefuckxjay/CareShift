@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, ScrollView, Pressable, Switch, StyleSheet } from "react-native";
-import { Sun, Moon, Smartphone, Bell, Lock } from "lucide-react-native";
+import { useRouter } from "expo-router";
+import { Sun, Moon, Smartphone, Bell, Lock, ChevronRight } from "lucide-react-native";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { useResponsive } from "@/hooks/useResponsive";
 import ScreenHeader from "@/components/ScreenHeader";
@@ -8,6 +9,7 @@ import Card from "@/components/Card";
 
 export default function SettingsScreen() {
   const { colors, preference, setPreference } = useAppTheme();
+  const router = useRouter();
   const { contentMaxWidth } = useResponsive();
   const [pushEnabled, setPushEnabled] = useState(true);
   const [emailEnabled, setEmailEnabled] = useState(false);
@@ -78,11 +80,12 @@ export default function SettingsScreen() {
 
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Security</Text>
           <Card style={{ padding: 0, overflow: "hidden" }}>
-            <Pressable style={styles.rowItem}>
+            <Pressable style={styles.rowItem} onPress={() => router.push("/change-password")}>
               <View style={[styles.rowIcon, { backgroundColor: colors.primaryTint }]}>
                 <Lock size={16} color={colors.primary} />
               </View>
               <Text style={[styles.rowLabel, { color: colors.text }]}>Change Password</Text>
+              <ChevronRight size={18} color={colors.textMuted} />
             </Pressable>
           </Card>
         </View>

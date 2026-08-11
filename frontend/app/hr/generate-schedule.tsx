@@ -6,12 +6,14 @@ import { useAppTheme } from "@/theme/ThemeContext";
 import { useResponsive } from "@/hooks/useResponsive";
 import ScreenHeader from "@/components/ScreenHeader";
 import Card from "@/components/Card";
+import * as shiftsApi from "@/api/shifts";
+import { apiErrorMessage } from "@/api/client";
 
 const WARDS = [
-  { name: "Medical Ward", morning: 30, evening: 25, night: 20 },
-  { name: "Surgical Ward", morning: 25, evening: 25, night: 18 },
-  { name: "ICU", morning: 20, evening: 20, night: 20 },
-  { name: "Emergency", morning: 22, evening: 22, night: 15 },
+  { name: "Medical Ward", morning: 10, evening: 8, night: 7 },
+  { name: "Surgical Ward", morning: 8, evening: 8, night: 6 },
+  { name: "ICU", morning: 7, evening: 7, night: 7 },
+  { name: "Emergency", morning: 7, evening: 7, night: 5 },
 ];
 
 export default function GenerateScheduleScreen() {
@@ -21,17 +23,31 @@ export default function GenerateScheduleScreen() {
   const [generating, setGenerating] = useState(false);
   const [done, setDone] = useState(false);
 
-  const onGenerate = () => {
+  const onGenerate = async () => {
     setGenerating(true);
     setDone(false);
-    setTimeout(() => {
-      setGenerating(false);
+    try {
+      const result = await shiftsApi.generateSchedule();
       setDone(true);
-      Alert.alert("Schedule generated", "Next week's optimal schedule is ready for review.", [
-        { text: "View Schedule", onPress: () => router.push("/(hr)/hr-schedule") },
+      const shortfallCount = result.shortfalls.length;
+      const message =
+        `${result.created} new shift${result.created === 1 ? "" : "s"} scheduled for the week of ` +
+        `${result.weekStart} – ${result.weekEnd}.\n\n` +
+        (shortfallCount > 0
+          ? `${shortfallCount} shift slot${shortfallCount === 1 ? " is" : "s are"} still short-staffed — check the coverage grid.`
+          : "Every shift is fully staffed.");
+      Alert.alert("Schedule generated", message, [
+        {
+          text: "View Schedule",
+          onPress: () => router.push({ pathname: "/(hr)/hr-schedule", params: { week: "next" } }),
+        },
         { text: "OK", style: "cancel" },
       ]);
-    }, 1400);
+    } catch (err) {
+      Alert.alert("Couldn't generate schedule", apiErrorMessage(err));
+    } finally {
+      setGenerating(false);
+    }
   };
 
   return (

@@ -4,6 +4,21 @@ import { prisma } from "../lib/prisma";
 import { requireAuth, requireRole, AuthedRequest } from "../middleware/auth";
 import { ALL_WARDS, requiredFor } from "../utils/coverage";
 
+type ShiftTypeKey = "MORNING" | "EVENING" | "NIGHT";
+
+const DAY_KEYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+const SHIFT_TYPES: ShiftTypeKey[] = ["MORNING", "EVENING", "NIGHT"];
+const SHIFT_TIME: Record<ShiftTypeKey, { startTime: string; endTime: string }> = {
+  MORNING: { startTime: "07:00", endTime: "15:00" },
+  EVENING: { startTime: "15:00", endTime: "23:00" },
+  NIGHT: { startTime: "23:00", endTime: "07:00" },
+};
+const AVAILABILITY_KEY: Record<ShiftTypeKey, "morning" | "evening" | "night"> = {
+  MORNING: "morning",
+  EVENING: "evening",
+  NIGHT: "night",
+};
+
 const router = Router();
 router.use(requireAuth);
 
@@ -136,6 +151,129 @@ router.post("/", requireRole("HR"), async (req, res) => {
 router.delete("/:id", requireRole("HR"), async (req, res) => {
   await prisma.shift.delete({ where: { id: req.params.id } });
   res.status(204).send();
+});
+
+// POST /api/shifts/generate?week=next|this — HR only. Fills remaining gaps
+// in a week's schedule (next week by default) from nurses' saved
+// availability and each ward's required headcount. Existing shifts for the
+// week are left untouched — this only adds shifts for slots that are still
+// short, so it's safe to re-run.
+router.post("/generate", requireRole("HR"), async (req, res) => {
+  const targetWeek = req.query.week === "this" ? "this" : "next";
+  const weekStart = startOfWeek();
+  if (targetWeek === "next") weekStart.setDate(weekStart.getDate() + 7);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 6);
+  weekEnd.setHours(23, 59, 59, 999);
+
+  const days = Array.from({ length: 7 }).map((_, i) => {
+    const d = new Date(weekStart);
+    d.setDate(d.getDate() + i);
+    return d;
+  });
+
+  const [nurses, availabilities, leaveRequests, existingShifts] = await Promise.all([
+    prisma.user.findMany({ where: { role: "NURSE", status: "ACTIVE" } }),
+    prisma.availability.findMany(),
+    prisma.leaveRequest.findMany({
+      where: { status: "APPROVED", startDate: { lte: weekEnd }, endDate: { gte: weekStart } },
+    }),
+    prisma.shift.findMany({ where: { date: { gte: weekStart, lte: weekEnd } } }),
+  ]);
+
+  const availabilityByNurse = new Map(availabilities.map((a) => [a.nurseId, a.data as any]));
+  const isOnLeave = (nurseId: string, date: Date) =>
+    leaveRequests.some((lr) => lr.nurseId === nurseId && date >= lr.startDate && date <= lr.endDate);
+
+  const assignedDatesByNurse = new Map<string, Set<string>>();
+  const shiftCountByNurse = new Map<string, number>();
+  for (const nurse of nurses) {
+    assignedDatesByNurse.set(nurse.id, new Set());
+    shiftCountByNurse.set(nurse.id, 0);
+  }
+
+  const filledCount = new Map<string, number>(); // key: `${ward}|${dateStr}|${type}`
+  for (const shift of existingShifts) {
+    const dateStr = shift.date.toISOString().split("T")[0];
+    const key = `${shift.ward}|${dateStr}|${shift.type}`;
+    filledCount.set(key, (filledCount.get(key) ?? 0) + 1);
+    assignedDatesByNurse.get(shift.nurseId)?.add(dateStr);
+    shiftCountByNurse.set(shift.nurseId, (shiftCountByNurse.get(shift.nurseId) ?? 0) + 1);
+  }
+
+  const newShifts: { nurseId: string; date: Date; type: ShiftTypeKey; ward: string; startTime: string; endTime: string }[] = [];
+  const shortfalls: { ward: string; date: string; day: string; type: ShiftTypeKey; required: number; filled: number }[] = [];
+  let totalRequired = 0;
+
+  for (const day of days) {
+    const dateStr = day.toISOString().split("T")[0];
+    const dayKey = DAY_KEYS[day.getDay()];
+    const dayLabel = day.toLocaleDateString(undefined, { weekday: "short" });
+
+    for (const type of SHIFT_TYPES) {
+      const availKey = AVAILABILITY_KEY[type];
+
+      // Process the ward with the largest current shortfall first, so
+      // cross-ward floaters go to the neediest ward.
+      const wardsByNeed = [...ALL_WARDS].sort((a, b) => {
+        const need = (w: string) => requiredFor(w, type) - (filledCount.get(`${w}|${dateStr}|${type}`) ?? 0);
+        return need(b) - need(a);
+      });
+
+      for (const ward of wardsByNeed) {
+        const required = requiredFor(ward, type);
+        totalRequired += required;
+        const key = `${ward}|${dateStr}|${type}`;
+        let filled = filledCount.get(key) ?? 0;
+        const needed = Math.max(0, required - filled);
+        if (needed === 0) continue;
+
+        const candidates = nurses
+          .filter((n) => {
+            if (assignedDatesByNurse.get(n.id)?.has(dateStr)) return false;
+            if (isOnLeave(n.id, day)) return false;
+            const avail = availabilityByNurse.get(n.id);
+            return Boolean(avail?.[dayKey]?.[availKey]);
+          })
+          .sort((a, b) => {
+            const aHome = a.ward === ward ? 0 : 1;
+            const bHome = b.ward === ward ? 0 : 1;
+            if (aHome !== bHome) return aHome - bHome;
+            const aCount = shiftCountByNurse.get(a.id) ?? 0;
+            const bCount = shiftCountByNurse.get(b.id) ?? 0;
+            if (aCount !== bCount) return aCount - bCount;
+            return a.name.localeCompare(b.name);
+          });
+
+        for (const nurse of candidates.slice(0, needed)) {
+          newShifts.push({ nurseId: nurse.id, date: day, type, ward, ...SHIFT_TIME[type] });
+          assignedDatesByNurse.get(nurse.id)?.add(dateStr);
+          shiftCountByNurse.set(nurse.id, (shiftCountByNurse.get(nurse.id) ?? 0) + 1);
+          filled += 1;
+        }
+        filledCount.set(key, filled);
+
+        if (filled < required) {
+          shortfalls.push({ ward, date: dateStr, day: dayLabel, type, required, filled });
+        }
+      }
+    }
+  }
+
+  if (newShifts.length > 0) {
+    await prisma.shift.createMany({ data: newShifts });
+  }
+
+  const totalShortfall = shortfalls.reduce((sum, s) => sum + (s.required - s.filled), 0);
+
+  res.json({
+    created: newShifts.length,
+    weekStart: weekStart.toISOString().split("T")[0],
+    weekEnd: weekEnd.toISOString().split("T")[0],
+    totalRequired,
+    totalFilled: totalRequired - totalShortfall,
+    shortfalls,
+  });
 });
 
 export default router;

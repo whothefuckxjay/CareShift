@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"const l = require\\('lucide-react-native'\\); console.log\\(typeof l.Send, typeof l.MessageCircle, typeof l.Trash2\\)\")",
+      "Bash(npm run *)",
+      "Bash(curl -s http://localhost:4000/api/health)",
+      "Read(//tmp/**)",
+      "Bash(curl -s -w '\\\\nHTTP %{http_code}\\\\n' -X DELETE http://localhost:4000/api/nurses/__TRACKED_VAR__ -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
+      "Bash(curl -s http://localhost:4000/api/nurses/__TRACKED_VAR__ -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
+      "Bash(curl -s -w '\\\\nHTTP %{http_code}\\\\n' -X POST http://localhost:4000/api/nurses -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Content-Type: application/json' -d '{\"name\":\"Delete Test Nurse 2\",\"email\":\"delete-test-nurse@hospital.com\",\"ward\":\"ICU\"}')",
+      "Bash(powershell -Command 'Get-CimInstance Win32_Process -Filter \"CommandLine LIKE '\\\\''%ts-node-dev%'\\\\''\" | Select-Object ProcessId | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }')",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:4000/api/health --max-time 2)",
+      "Bash(rm -f /tmp/hr_token.txt /tmp/new_id.txt /tmp/backend2.log)",
+      "Bash(curl -s -w '\\\\nHTTP %{http_code}\\\\n' -X PATCH http://localhost:4000/api/auth/password -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Content-Type: application/json' -d '{\"currentPassword\":\"testpass1\",\"newPassword\":\"newpass2\"}')",
+      "Bash(curl -s -w \"\\\\nHTTP %{http_code}\\\\n\" -X POST http://localhost:4000/api/auth/login -H \"Content-Type: application/json\" -d '{\"email\":\"password-test@hospital.com\",\"password\":\"testpass1\"}')",
+      "Bash(curl -s -w \"\\\\nHTTP %{http_code}\\\\n\" -X POST http://localhost:4000/api/auth/login -H \"Content-Type: application/json\" -d '{\"email\":\"password-test@hospital.com\",\"password\":\"newpass2\"}')",
+      "Bash(rm -f /tmp/pt_token.txt /tmp/pt_id.txt /tmp/backend3.log)",
+      "Bash(curl -s http://localhost:4000/api/shifts/coverage/week?start=2026-08-17 -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
+      "Bash(node -e \"process.stdin.on\\('data',d=>console.log\\(JSON.stringify\\(JSON.parse\\(d\\).coverage,null,0\\)\\)\\)\")",
+      "Bash(curl -s -X POST http://localhost:4000/api/shifts/generate -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
+      "Bash(node -e \"process.stdin.on\\('data',d=>{const j=JSON.parse\\(d\\); console.log\\('created:',j.created,'totalFilled:',j.totalFilled,'shortfalls:',j.shortfalls.length\\)}\\)\")",
+      "Bash(curl -s -X DELETE http://localhost:4000/api/nurses/8ddb1395-7a94-4bd0-a786-a1c8c89ff5eb -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
+      "Bash(curl -s -X DELETE http://localhost:4000/api/nurses/238d6f31-a18a-45fd-9f84-70e7e9fa17b0 -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
+      "Bash(rm -f /tmp/hr_token.txt /tmp/gen1.json /tmp/backend4.log)",
+      "Bash(node \"C:\\\\Users\\\\Jay\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-Jay-Desktop-projects-careshift-nurse-portal\\\\1d31e29e-8e94-40ad-9d01-ad178fefaf02\\\\scratchpad\\\\seed-random-nurses.js\")",
+      "Bash(node -e \"process.stdin.on\\('data',d=>{const j=JSON.parse\\(d\\); console.log\\('Total nurses:', j.nurses.length\\); const byWard={}; j.nurses.forEach\\(n=>byWard[n.ward]=\\(byWard[n.ward]||0\\)+1\\); console.log\\(byWard\\)}\\)\")",
+      "Bash(rm -f /tmp/backend5.log)",
+      "Bash(node -e \"process.stdin.on\\('data',d=>{const c=JSON.parse\\(d\\).coverage; console.log\\(c.map\\(x=>x.date+':'+x.morning.filled+'/'+x.evening.filled+'/'+x.night.filled\\).join\\(' | '\\)\\)}\\)\")"
+    ]
+  }
+}

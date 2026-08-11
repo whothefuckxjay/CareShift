@@ -7,6 +7,8 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { ThemeProvider, useAppTheme } from "@/theme/ThemeContext";
 import { AuthProvider } from "@/context/AuthContext";
+import { MessagesProvider } from "@/context/MessagesContext";
+import Toast from "@/components/Toast";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -32,10 +34,13 @@ function RootStack() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="(hr)" />
         <Stack.Screen name="notifications" options={{ presentation: "card" }} />
+        <Stack.Screen name="messages" options={{ presentation: "card" }} />
+        <Stack.Screen name="messages/[id]" />
         <Stack.Screen name="profile" />
         <Stack.Screen name="profile-edit" />
         <Stack.Screen name="help" />
         <Stack.Screen name="settings" />
+        <Stack.Screen name="change-password" />
         <Stack.Screen name="analytics" />
         <Stack.Screen name="schedule/full" />
         <Stack.Screen name="schedule/[id]" />
@@ -49,6 +54,7 @@ function RootStack() {
         <Stack.Screen name="hr/generate-schedule" />
         <Stack.Screen name="hr/add-nurse" />
       </Stack>
+      <Toast />
     </>
   );
 }
@@ -59,7 +65,9 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <ThemeProvider>
           <AuthProvider>
-            <RootStack />
+            <MessagesProvider>
+              <RootStack />
+            </MessagesProvider>
           </AuthProvider>
         </ThemeProvider>
       </SafeAreaProvider>

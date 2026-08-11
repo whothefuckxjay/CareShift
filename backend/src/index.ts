@@ -1,4 +1,5 @@
 import "dotenv/config";
+import http from "http";
 import express from "express";
 import cors from "cors";
 import authRoutes from "./routes/auth.routes";
@@ -7,6 +8,8 @@ import shiftRoutes from "./routes/shifts.routes";
 import leaveRoutes from "./routes/leave.routes";
 import availabilityRoutes from "./routes/availability.routes";
 import statsRoutes from "./routes/stats.routes";
+import messagesRoutes from "./routes/messages.routes";
+import { initSocket } from "./socket";
 
 const app = express();
 
@@ -21,6 +24,7 @@ app.use("/api/shifts", shiftRoutes);
 app.use("/api/leave", leaveRoutes);
 app.use("/api/availability", availabilityRoutes);
 app.use("/api/stats", statsRoutes);
+app.use("/api/messages", messagesRoutes);
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
@@ -29,6 +33,8 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 });
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
-app.listen(PORT, () => {
+const server = http.createServer(app);
+initSocket(server);
+server.listen(PORT, () => {
   console.log(`CareShift API listening on http://localhost:${PORT}`);
 });

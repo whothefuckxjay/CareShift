@@ -1,7 +1,7 @@
-import React from "react";
-import { View, Text, ScrollView, Pressable, StyleSheet, Alert } from "react-native";
+import React, { useState } from "react";
+import { View, Text, ScrollView, Pressable, StyleSheet, Alert, ActivityIndicator } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Mail, Phone, Briefcase, CalendarCheck, MessageCircle } from "lucide-react-native";
+import { Mail, Phone, Briefcase, CalendarCheck, MessageCircle, Trash2 } from "lucide-react-native";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { useResponsive } from "@/hooks/useResponsive";
 import ScreenHeader from "@/components/ScreenHeader";
@@ -10,6 +10,7 @@ import Avatar from "@/components/Avatar";
 import { LoadingView, ErrorView } from "@/components/StateViews";
 import { useApi } from "@/hooks/useApi";
 import * as nursesApi from "@/api/nurses";
+import { apiErrorMessage } from "@/api/client";
 import type { ApiUser } from "@/api/types";
 
 export default function HRNurseDetailScreen() {
@@ -17,6 +18,7 @@ export default function HRNurseDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { contentMaxWidth } = useResponsive();
+  const [deleting, setDeleting] = useState(false);
 
   const { state, refresh } = useApi<ApiUser>(() => nursesApi.getNurse(id ?? ""), [id]);
 
@@ -24,6 +26,30 @@ export default function HRNurseDetailScreen() {
   if (state.status === "error") return <View style={{ flex: 1, backgroundColor: colors.background }}><ErrorView message={state.message} onRetry={refresh} /></View>;
 
   const nurse = state.data;
+
+  const onDeletePress = () => {
+    Alert.alert(
+      "Delete Nurse",
+      `Are you sure you want to delete ${nurse.name}? This will permanently remove their account, shifts, leave requests, availability and messages. This action cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              await nursesApi.deleteNurse(nurse.id);
+              router.replace("/(hr)/hr-nurses");
+            } catch (err) {
+              setDeleting(false);
+              Alert.alert("Couldn't delete nurse", apiErrorMessage(err));
+            }
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -52,7 +78,12 @@ export default function HRNurseDetailScreen() {
 
           <View style={styles.actionsRow}>
             <Pressable
-              onPress={() => Alert.alert("Message sent", `Your message to ${nurse.name} has been sent.`)}
+              onPress={() =>
+                router.push({
+                  pathname: "/messages/[id]",
+                  params: { id: nurse.id, name: nurse.name, avatar: nurse.avatar ?? "" },
+                })
+              }
               style={[styles.actionBtn, { backgroundColor: colors.primary }]}
             >
               <MessageCircle size={16} color="#fff" />
@@ -66,6 +97,21 @@ export default function HRNurseDetailScreen() {
               <Text style={[styles.actionBtnText, { color: colors.primary }]}>Adjust Shifts</Text>
             </Pressable>
           </View>
+
+          <Pressable
+            onPress={onDeletePress}
+            disabled={deleting}
+            style={[styles.deleteBtn, { backgroundColor: colors.dangerTint, opacity: deleting ? 0.6 : 1 }]}
+          >
+            {deleting ? (
+              <ActivityIndicator color={colors.danger} size="small" />
+            ) : (
+              <>
+                <Trash2 size={16} color={colors.danger} />
+                <Text style={[styles.deleteBtnText, { color: colors.danger }]}>Delete Nurse</Text>
+              </>
+            )}
+          </Pressable>
         </View>
       </ScrollView>
     </View>
@@ -99,4 +145,6 @@ const styles = StyleSheet.create({
   actionsRow: { flexDirection: "row", gap: 12, marginTop: 20 },
   actionBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, height: 50, borderRadius: 14 },
   actionBtnText: { color: "#fff", fontWeight: "700", fontSize: 13 },
+  deleteBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, height: 50, borderRadius: 14, marginTop: 12 },
+  deleteBtnText: { fontWeight: "700", fontSize: 13 },
 });

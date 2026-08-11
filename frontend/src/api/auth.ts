@@ -21,3 +21,7 @@ export async function me() {
   const res = await api.get<{ user: ApiUser }>("/auth/me");
   return res.data.user;
 }
+
+export async function changePassword(currentPassword: string, newPassword: string) {
+  await api.patch("/auth/password", { currentPassword, newPassword });
+}

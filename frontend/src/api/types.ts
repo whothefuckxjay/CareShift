@@ -54,6 +54,40 @@ export type WeeklyAvailability = Record<
   { morning: boolean; evening: boolean; night: boolean }
 >;
 
+export type ApiMessage = {
+  id: string;
+  senderId: string;
+  recipientId: string;
+  body: string;
+  read: boolean;
+  createdAt: string;
+  sender?: { id: string; name: string; avatar: string | null; role: Role };
+};
+
+export type MessageThread = {
+  user: { id: string; name: string; avatar: string | null; role: Role };
+  lastMessage: ApiMessage;
+  unreadCount: number;
+};
+
+export type ScheduleShortfall = {
+  ward: string;
+  date: string;
+  day: string;
+  type: ShiftType;
+  required: number;
+  filled: number;
+};
+
+export type GenerateScheduleResult = {
+  created: number;
+  weekStart: string;
+  weekEnd: string;
+  totalRequired: number;
+  totalFilled: number;
+  shortfalls: ScheduleShortfall[];
+};
+
 export type HRStats = {
   totalNurses: number;
   activeNurses: number;

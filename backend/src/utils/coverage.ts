@@ -3,10 +3,10 @@
 // these yet (that's the deferred "Shift Requirements" screen) — for now
 // they're fixed server-side constants.
 export const WARD_REQUIREMENTS: Record<string, { MORNING: number; EVENING: number; NIGHT: number }> = {
-  "Medical Ward": { MORNING: 30, EVENING: 25, NIGHT: 20 },
-  "Surgical Ward": { MORNING: 25, EVENING: 25, NIGHT: 18 },
-  ICU: { MORNING: 20, EVENING: 20, NIGHT: 20 },
-  Emergency: { MORNING: 22, EVENING: 22, NIGHT: 15 },
+  "Medical Ward": { MORNING: 10, EVENING: 8, NIGHT: 7 },
+  "Surgical Ward": { MORNING: 8, EVENING: 8, NIGHT: 6 },
+  ICU: { MORNING: 7, EVENING: 7, NIGHT: 7 },
+  Emergency: { MORNING: 7, EVENING: 7, NIGHT: 5 },
 };
 
 export const ALL_WARDS = Object.keys(WARD_REQUIREMENTS);

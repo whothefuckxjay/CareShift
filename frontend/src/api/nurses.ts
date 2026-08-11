@@ -20,3 +20,7 @@ export async function updateNurse(id: string, input: Partial<{ status: "ACTIVE" 
   const res = await api.patch<{ nurse: ApiUser }>(`/nurses/${id}`, input);
   return res.data.nurse;
 }
+
+export async function deleteNurse(id: string) {
+  await api.delete(`/nurses/${id}`);
+}
